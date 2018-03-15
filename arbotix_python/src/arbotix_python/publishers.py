@@ -30,6 +30,7 @@
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Int16MultiArray
 
 class DiagnosticsPublisher:
     """ Class to handle publications of joint_states message. """
@@ -90,3 +91,23 @@ class JointStatePublisher:
             self.pub.publish(msg)
             self.t_next = rospy.Time.now() + self.t_delta
 
+class LoadPublisher:
+	"""Class to handle the publication of joint loads (WIP)"""
+	
+	def __init__(self):
+
+        # parameters: throttle rate and geometry
+        self.rate = rospy.get_param("~read_rate", 10.0)
+        self.t_delta = rospy.Duration(1.0/self.rate)
+        self.t_next = rospy.Time.now() + self.t_delta
+        
+        # Publisher
+        self.pub = rospy.Publisher('servo_loads', Int16MultiArray, queue_size=5)
+        
+    def update(self, controllers):
+		"""publish joint loads"""
+		if rospy.Time.now() > self.t_next:
+			#for controller in controllers:
+			data = controller.loads
+			self.pub.publish(data)
+			self.t_next = rospy.Time.now() + self.t_delta

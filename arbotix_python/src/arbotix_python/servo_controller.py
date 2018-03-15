@@ -81,6 +81,7 @@ class DynamixelServo(Joint):
 
         self.voltage = 0.0
         self.temperature = 0.0
+        seff.load = 0.0
         
         # ROS interfaces
         rospy.Subscriber(name+'/command', Float64, self.commandCb)
@@ -441,7 +442,7 @@ class ServoController(Controller):
                                     joint.voltage = val[i]/10.0
                                 if val[i+1] < 100:
                                     joint.temperature = val[i+1]
-                            except:
+                            except:if self.device.use_sync_read:
                                 # not a readable servo
                                 continue 
             else:
@@ -457,6 +458,37 @@ class ServoController(Controller):
         self.iter += 1
         return None
 
+    def getLoads(self):
+		""" Update the loads on the servos (very WIP)"""
+		if not self.fake:
+			if self.device.use_sync_read:
+				# arbotix/servostik/wifi board sync_read
+				synclist = list()
+				for joint in self.dynamixels:
+					if joint.readable:
+						synclist.append(joint.id)
+			    if len(synclist) > 0:
+                    val = self.device.syncRead(synclist, P_PRESENT_LOAD_L, 2)
+					if val:
+						for joint in self.dynamixels:
+							try:
+								i = synclist.index(joint.id)*2
+								#TODO: add servo type logic?
+								joint.load = val[i]+(val[i+1])<<8
+							except:
+								# not a readable servo
+								continue
+			else:
+			# direct connection, or other hardware with no sync_read capability
+				for joint in self.dynamixels:
+                    if joint.readable:
+                        val = self.device.read(joint.id, P_PRESENT_LOAD_L, 2)
+                        try:
+							joint.load = val[i]+(val[i+1])<<8
+                        except:
+							# not a readable servo
+                            continue
+			
     def enableCb(self, req):
         """ Turn on/off all servos torque, so that they are pose-able. """
         for joint in self.dynamixels:
