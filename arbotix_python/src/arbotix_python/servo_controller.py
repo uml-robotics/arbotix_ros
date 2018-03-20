@@ -495,13 +495,10 @@ class ServoController(Controller):
                 for joint in self.dynamixels:
                     if joint.readable:
                         synclist.append(joint.id)
-                        
                 if len(synclist) > 0:
                     val = self.device.syncRead(synclist, P_PRESENT_LOAD_L, 2)
-                    print synclist
-                    print val
                     if val:
-                        for joints in self.dynamixels:
+                        for joint in self.dynamixels:
                             try:
                                 i = synclist.index(joint.id)*2
                                 joint.load = val[i]+(val[i+1]<<8)
