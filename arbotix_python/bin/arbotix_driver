@@ -152,7 +152,7 @@ class ArbotixROS(ArbotiX):
             # publish feedback
             self.joint_state_publisher.update(self.joints.values(), self.controllers)
             self.diagnostics.update(self.joints.values(), self.controllers)
-            self.joint_load_publisher(self.joints.values(), self.controllers)
+            self.joint_load_publisher.update(self.joints.values(), self.controllers)
 
             r.sleep()
 

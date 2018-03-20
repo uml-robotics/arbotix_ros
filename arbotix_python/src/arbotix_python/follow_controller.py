@@ -162,4 +162,8 @@ class FollowController(Controller):
         else:
             msg.values.append(KeyValue("State", "Not Active"))
         return msg
+        
+    def getLoads(self):
+        # Placeholder
+        pass
 

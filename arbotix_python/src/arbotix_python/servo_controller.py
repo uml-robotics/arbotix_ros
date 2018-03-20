@@ -83,7 +83,7 @@ class DynamixelServo(Joint):
 
         self.voltage = 0.0
         self.temperature = 0.0
-        self.load = 1024
+        self.load = 10241
         self.tolerance = rospy.get_param(n + "tolerance", 0.05)   # Default 0.05 radians
         rospy.loginfo("Started Servo %d  %s", self.id, name)
 
@@ -199,7 +199,7 @@ class DynamixelServo(Joint):
         msg.name = self.name
         msg.level = self.level
         msg.message = "OK" #TODO: tell when the load is maxing out?
-        msg.value.append(KeyValue("Load", self.load))
+        msg.values.append(KeyValue("Load", str(self.load)))
         return msg      
 
     def angleToTicks(self, angle):
@@ -495,16 +495,19 @@ class ServoController(Controller):
                 for joint in self.dynamixels:
                     if joint.readable:
                         synclist.append(joint.id)
+                        
                 if len(synclist) > 0:
                     val = self.device.syncRead(synclist, P_PRESENT_LOAD_L, 2)
+                    print synclist
+                    print val
                     if val:
                         for joints in self.dynamixels:
                             try:
-                                i = synclist.index(joint_id)*2
-                                joint.load = val[i]+(val[i+1]<<8))
+                                i = synclist.index(joint.id)*2
+                                joint.load = val[i]+(val[i+1]<<8)
                             except Exception as e:
                                 # not a readable servo
-                                rospy.logerr("Servo read error: " + str(e) )
+                                rospy.loginfo("Servo read error: " + str(e) )
                                 joint.load = 1024
                                 continue 
             else:

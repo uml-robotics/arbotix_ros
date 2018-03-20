@@ -107,11 +107,11 @@ class JointLoadPublisher:
             msg = DiagnosticArray()
             msg.header.stamp = now
             for controller in controllers:
-                d = controller.getDiagnostics()
+                d = controller.getLoads()
                 if d:
                     msg.status.append(d)
             for joint in joints:
-                d = joint.getDiagnostics()
+                d = joint.getLoad()
                 if d:
                     msg.status.append(d)
             # publish and update stats
