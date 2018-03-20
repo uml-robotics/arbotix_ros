@@ -30,6 +30,7 @@
 import rospy
 from diagnostic_msgs.msg import DiagnosticArray
 from sensor_msgs.msg import JointState
+from std_msgs.msg import UInt16MultiArray
 
 class DiagnosticsPublisher:
     """ Class to handle publications of joint_states message. """
@@ -90,3 +91,29 @@ class JointStatePublisher:
             self.pub.publish(msg)
             self.t_next = rospy.Time.now() + self.t_delta
 
+class JointLoadPublisher:
+    """ Class to handle the publishing of dynamixel joint loads. """
+    
+    def __init__(self):
+        self.t_delta = rospy.Duration(1.0/rospy.get_param("~diagnostic_rate", 1.0))
+        self.t_next = rospy.Time.now() + self.t_delta
+        self.pub = rospy.Publisher('joint_loads', DiagnosticArray, queue_size=5)
+        
+    def update(self, joints, controllers):
+        """ Publish loads. """    
+        now = rospy.Time.now()
+        if now > self.t_next:
+            # create message
+            msg = DiagnosticArray()
+            msg.header.stamp = now
+            for controller in controllers:
+                d = controller.getDiagnostics()
+                if d:
+                    msg.status.append(d)
+            for joint in joints:
+                d = joint.getDiagnostics()
+                if d:
+                    msg.status.append(d)
+            # publish and update stats
+            self.pub.publish(msg)
+            self.t_next = now + self.t_delta

@@ -68,6 +68,7 @@ class ArbotixROS(ArbotiX):
         # setup publishers
         self.diagnostics = DiagnosticsPublisher()
         self.joint_state_publisher = JointStatePublisher()
+        self.joint_load_publisher = JointLoadPublisher()
 
         # start an arbotix driver
         if not self.fake:
@@ -151,6 +152,7 @@ class ArbotixROS(ArbotiX):
             # publish feedback
             self.joint_state_publisher.update(self.joints.values(), self.controllers)
             self.diagnostics.update(self.joints.values(), self.controllers)
+            self.joint_load_publisher(self.joints.values(), self.controllers)
 
             r.sleep()
 
