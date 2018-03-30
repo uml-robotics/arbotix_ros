@@ -196,7 +196,7 @@ class DynamixelServo(Joint):
     def getLoad(self):
         """ Get the load on the servo """
         name = self.name
-        load = float(self.load)
+        load = float((self.load-1024)*0.1)
         return name, load      
 
     def angleToTicks(self, angle):
