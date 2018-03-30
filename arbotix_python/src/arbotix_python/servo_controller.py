@@ -83,7 +83,7 @@ class DynamixelServo(Joint):
 
         self.voltage = 0.0
         self.temperature = 0.0
-        self.load = 10241
+        self.load = 1024
         self.tolerance = rospy.get_param(n + "tolerance", 0.05)   # Default 0.05 radians
         rospy.loginfo("Started Servo %d  %s", self.id, name)
 
@@ -195,12 +195,9 @@ class DynamixelServo(Joint):
         
     def getLoad(self):
         """ Get the load on the servo """
-        msg = DiagnosticStatus()
-        msg.name = self.name
-        msg.level = self.level
-        msg.message = "OK" #TODO: tell when the load is maxing out?
-        msg.values.append(KeyValue("Load", str(self.load)))
-        return msg      
+        name = self.name
+        load = float(self.load)
+        return name, load      
 
     def angleToTicks(self, angle):
         """ Convert an angle to ticks, applying limits. """

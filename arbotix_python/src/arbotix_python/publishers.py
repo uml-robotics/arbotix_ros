@@ -95,25 +95,30 @@ class JointLoadPublisher:
     """ Class to handle the publishing of dynamixel joint loads. """
     
     def __init__(self):
-        self.t_delta = rospy.Duration(1.0/rospy.get_param("~diagnostic_rate", 1.0))
+        self.t_delta = rospy.Duration(1.0/rospy.get_param("~read_rate", 10.0))
         self.t_next = rospy.Time.now() + self.t_delta
-        self.pub = rospy.Publisher('joint_loads', DiagnosticArray, queue_size=5)
+        self.pub = rospy.Publisher('joint_loads', JointState, queue_size=5)
         
     def update(self, joints, controllers):
         """ Publish loads. """    
         now = rospy.Time.now()
         if now > self.t_next:
             # create message
-            msg = DiagnosticArray()
+            msg = JointState()
             msg.header.stamp = now
+            msg.name = list()
+            msg.effort = list()
             for controller in controllers:
                 d = controller.getLoads()
-                if d:
-                    msg.status.append(d)
+                #if d:
+                    #msg.name.append(d)
+                    #msg.effort.append(d)
             for joint in joints:
-                d = joint.getLoad()
+                d, e = joint.getLoad()
                 if d:
-                    msg.status.append(d)
+                    msg.name.append(d)
+                    msg.effort.append(e)
+
             # publish and update stats
             self.pub.publish(msg)
             self.t_next = now + self.t_delta
