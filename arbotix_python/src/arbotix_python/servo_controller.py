@@ -34,6 +34,7 @@ from math import radians
 from std_msgs.msg import Float64
 from arbotix_msgs.srv import *
 from diagnostic_msgs.msg import *
+from sensor_msgs.msg import JointState
 
 from ax12 import *
 from joints import *
@@ -376,8 +377,40 @@ class HobbyServo(Joint):
         else:
             self.dirty = True
             self.desired = req.data
-
-
+            
+            
+class SimServo(Joint):
+    """
+    TODO: TEST
+    """
+    
+    def __init__(self, device, name, side, ns="~joints"):
+        
+        # Setup simulated servo
+        Joint.__init__(self, device, name)
+        n = ns+"/"+name+"/"
+        self.name = name
+        self.full_name = side+ '_'+ name
+        self.id = int(rospy.get_param(n+"id"))
+        self.position = 0.0
+        self.desired = 0.0
+        
+        # Setup ROS/Gazebo interface
+        self.pub = rospy.Publisher(self.full_name+'/command', Float64, queue_size=5)
+        rospy.Subscriber("/joint_states", JointState, self.joint_state_cb)
+        
+    def setControlOutput(self, position):
+        """ Set the position that controller is moving to."""
+        self.desired = position
+        return position
+        
+    def joint_state_cb(self, msg):
+        """ Callback for the joint state message """
+        names = msg.name
+        i = names.index(self.full_name)
+        self.position = msg.position[i]
+        
+        
 from controllers import *
 
 class ServoController(Controller):
@@ -509,3 +542,39 @@ class ServoController(Controller):
                 pass
         self.iter += 1
         return None
+
+
+class SimServoController(Controller):
+    """
+    TODO: TEST
+    """
+    
+    def __init__(self, device, name):
+        
+        # Setup simulated servo controller
+        Controller.__init__(self, device, name)
+        self.simservos = list()
+        self.iter = 0
+        
+        # Get joints
+        for joint in device.joints.values():
+            self.simservos.append(joint)
+            
+        # Setup timessteps
+        self.w_delta = rospy.Duration(1.0/rospy.get_param("~write_rate", 10.0))
+        self.w_next = rospy.Time.now() + self.w_delta
+        self.r_delta = rospy.Duration(1.0/rospy.get_param("~read_rate", 10.0))
+        self.r_next = rospy.Time.now() + self.r_delta
+        
+    def update(self):
+        """ Read servo positions, update them. """
+        
+        # Read in current positions
+        if rospy.Time.now() > self.r_next:
+            for joint in self.simservos:
+                pass #?
+                
+        if rospy.Time.now() > self.w_next:
+            for joint in self.simservos:
+                joint.pub.publish(joint.desired)
+

@@ -1,0 +1,113 @@
+#!/usr/bin/env python
+
+"""
+  TODO: description
+
+  Copyright (c) 2018, University of Cincinnati
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+  * Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+
+import rospy
+import sys
+
+from arbotix_msgs.msg import *
+from arbotix_msgs.srv import *
+
+from arbotix_python.diff_controller import DiffController
+from arbotix_python.follow_controller import FollowController
+from arbotix_python.servo_controller import *
+from arbotix_python.linear_controller import *
+
+
+controller_types = { "follow_controller" : FollowController,
+                     "diff_controller"   : DiffController,
+#                    "omni_controller"   : OmniController,
+                     "linear_controller" : LinearControllerAbsolute,
+                     "linear_controller_i" : LinearControllerIncremental }
+
+class ArbotixGazebo(object):
+    
+    def __init__(self):
+        
+        # Setup interface and parameters
+        pause = False
+        self.rate = rospy.get_param("~rate", 100.0)
+        self.fake = rospy.get_param("~sim", False)
+        is_left_arm = rospy.get_param("~left_arm", True)
+        if (is_left_arm):
+            self.side = "left"
+        else:
+            self.side = "right"
+        rospy.loginfo("Simulated ArbotiX initialized.")
+        
+        # setup joints
+        self.joints = dict()
+        for name in rospy.get_param("~joints", dict()).keys():
+            self.joints[name] = SimServo(self, name, self.side)
+                
+        # setup controller
+        self.controllers = [SimServoController(self, "servos"), ]
+        controllers = rospy.get_param("~controllers", dict())
+        for name, params in controllers.items():
+            try:
+                controller = controller_types[params["type"]](self, name)
+                self.controllers.append( controller )
+                pause = pause or controller.pause
+            except Exception as e:
+                if type(e) == KeyError:
+                    rospy.logerr("Unrecognized controller: " + params["type"])
+                else:  
+                    rospy.logerr(str(type(e)) + str(e))
+                
+        # Startup controllers
+        for controller in self.controllers:
+            controller.startup()
+        
+        # Set rate
+        r = rospy.Rate(self.rate)
+        
+        # main loop -- do all the read/write here
+        while not rospy.is_shutdown():
+    
+            # update controllers
+            for controller in self.controllers:
+                controller.update()
+                
+            r.sleep()
+
+        # do shutdown
+        for controller in self.controllers:
+            controller.shutdown()
+        
+
+
+if __name__ == "__main__":
+    rospy.init_node('arbotix_sim')
+    a = ArbotixGazebo()
+
