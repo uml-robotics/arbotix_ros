@@ -122,3 +122,35 @@ class JointLoadPublisher:
             # publish and update stats
             self.pub.publish(msg)
             self.t_next = now + self.t_delta
+            
+class ArmStatePublisher:
+    """ """
+    
+    def __init__(self):        
+        # parameters: throttle rate and geometry
+        self.rate = rospy.get_param("~read_rate", 10.0)
+        self.t_delta = rospy.Duration(1.0/self.rate)
+        self.t_next = rospy.Time.now() + self.t_delta
+        
+        # publisher
+        self.pub = rospy.Publisher('/joint_states', JointState, queue_size=5)
+        
+    def update(self, joints, controllers):
+        """ """
+        if rospy.Time.now() > self.t_next:
+            msg = JointState()
+            msg.header.stamp = rospy.Time.now()
+            msg.name = list()
+            msg.position = list()
+            msg.velocity = list()
+            for joint in joints:
+                msg.name.append(joint.name)
+                msg.position.append(joint.position)
+                msg.velocity.append(joint.velocity)
+            for controller in controllers:
+                msg.name += controller.joint_names
+                msg.position += controller.joint_positions
+                msg.velocity += controller.joint_velocities
+            self.pub.publish(msg)
+            self.t_next = rospy.Time.now() + self.t_delta
+    

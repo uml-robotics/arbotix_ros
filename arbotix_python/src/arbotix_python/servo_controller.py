@@ -384,20 +384,22 @@ class SimServo(Joint):
     TODO: TEST
     """
     
-    def __init__(self, device, name, side, ns="~joints"):
+    def __init__(self, device, name, side, robot, ns="~joints"):
         
         # Setup simulated servo
         Joint.__init__(self, device, name)
         n = ns+"/"+name+"/"
         self.name = name
+        self.robot = robot
         self.full_name = side+ '_'+ name
         self.id = int(rospy.get_param(n+"id"))
         self.position = 0.0
         self.desired = 0.0
+        self.velocity = 0.0
         
         # Setup ROS/Gazebo interface
-        self.pub = rospy.Publisher(self.full_name+'/command', Float64, queue_size=5)
-        rospy.Subscriber("/joint_states", JointState, self.joint_state_cb)
+        self.pub = rospy.Publisher(robot+'/'+self.full_name+'_controller/command', Float64, queue_size=5)
+        rospy.Subscriber(robot+"/joint_states", JointState, self.joint_state_cb)
         
     def setControlOutput(self, position):
         """ Set the position that controller is moving to."""
@@ -409,6 +411,7 @@ class SimServo(Joint):
         names = msg.name
         i = names.index(self.full_name)
         self.position = msg.position[i]
+        self.velocity = msg.position[i]
         
         
 from controllers import *

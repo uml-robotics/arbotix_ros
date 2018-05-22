@@ -120,7 +120,6 @@ class FollowController(Controller):
         start = traj.header.stamp
         if start.secs == 0 and start.nsecs == 0:
             start = rospy.Time.now()
-
         r = rospy.Rate(self.rate)
         last = [ self.device.joints[joint].position for joint in self.joints ]
         for point in traj.points:

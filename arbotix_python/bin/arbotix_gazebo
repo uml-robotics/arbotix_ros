@@ -43,6 +43,7 @@ from arbotix_python.diff_controller import DiffController
 from arbotix_python.follow_controller import FollowController
 from arbotix_python.servo_controller import *
 from arbotix_python.linear_controller import *
+from arbotix_python.publishers import *
 
 
 controller_types = { "follow_controller" : FollowController,
@@ -59,6 +60,7 @@ class ArbotixGazebo(object):
         pause = False
         self.rate = rospy.get_param("~rate", 100.0)
         self.fake = rospy.get_param("~sim", False)
+        self.robot = rospy.get_param("~robot", "")
         is_left_arm = rospy.get_param("~left_arm", True)
         if (is_left_arm):
             self.side = "left"
@@ -66,10 +68,13 @@ class ArbotixGazebo(object):
             self.side = "right"
         rospy.loginfo("Simulated ArbotiX initialized.")
         
+        # Setup publishers
+        self.joint_state_publisher = ArmStatePublisher()
+        
         # setup joints
         self.joints = dict()
         for name in rospy.get_param("~joints", dict()).keys():
-            self.joints[name] = SimServo(self, name, self.side)
+            self.joints[name] = SimServo(self, name, self.side, self.robot)
                 
         # setup controller
         self.controllers = [SimServoController(self, "servos"), ]
@@ -84,7 +89,7 @@ class ArbotixGazebo(object):
                     rospy.logerr("Unrecognized controller: " + params["type"])
                 else:  
                     rospy.logerr(str(type(e)) + str(e))
-                
+        
         # Startup controllers
         for controller in self.controllers:
             controller.startup()
@@ -98,6 +103,9 @@ class ArbotixGazebo(object):
             # update controllers
             for controller in self.controllers:
                 controller.update()
+                
+            # publish feedback
+            self.joint_state_publisher.update(self.joints.values(), self.controllers)
                 
             r.sleep()
 
