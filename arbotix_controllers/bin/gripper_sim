@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+
+"""
+  gripper_controller - action based controller for grippers.
+  Copyright (c) 2011-2014 Vanadium Labs LLC.  All right reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+      * Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in the
+        documentation and/or other materials provided with the distribution.
+      * Neither the name of Vanadium Labs LLC nor the names of its 
+        contributors may be used to endorse or promote products derived 
+        from this software without specific prior written permission.
+  
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL VANADIUM LABS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+  OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+import rospy, actionlib
+import thread
+
+from control_msgs.msg import GripperCommandAction
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Float64
+from math import asin, sin
+from multiprocessing import Lock
+
+
+class SimGripperModel():
+    """ Sim gripper model. """
+    
+    def __init__(self):
+        
+        self.pad_width = rospy.get_param('~pad_width', 0.01)
+        self.finger_length = rospy.get_param('~finger_length', 0.02)
+        self.min_opening = rospy.get_param('~min_opening', 0.0)
+        self.max_opening = rospy.get_param('~max_opening', 0.09)
+        self.center = rospy.get_param('~center', 0.0)
+        self.invert = rospy.get_param('~invert', False)
+        self.joint = rospy.get_param('~joint', 'gripper_joint')
+        
+        # publisher
+        self.pub = rospy.Publisher('gripper_command', Float64, queue_size=5)
+        
+    def setCommand(self, command):
+        """ Take an input command of width (m) to open gripper and publish angle to Servo. """   
+        # check limits
+        if command.position > self.max_opening or command.position < self.min_opening:                 
+            rospy.logerr("Command (%.5f) exceeds max limit ( %.5f) or min limit ( %.5f)", command.position, self.max_opening, self.max_opening)
+            return False       
+
+        # publish desired position
+        self.pub.publish(command.position)
+        rospy.loginfo("Gripper publish servo goal: format{}".format(command.position))
+        return True
+        
+    def getEffort(self, joint_states):
+        # TODO
+        return 1.0
+        
+
+class GripperActionController:
+    """ The actual action callbacks. """
+    def __init__(self):
+        rospy.init_node('gripper_controller')
+        self.mutex = Lock()
+        self.tolerance = rospy.get_param('~tolerance', .001) # tolerance for meeting goals (radians)
+
+        # setup model
+        self.model = SimGripperModel()
+
+        # subscribe to joint_states
+        rospy.Subscriber('joint_states', JointState, self.stateCb)
+        
+        # get joint name so we can track our joint status
+        self.joint = rospy.get_param('~joint', 'gripper_joint')
+        self.state = JointState()
+        # TODO handle joint names and joint status for Trapezoidal
+        
+        # wait for first joint status update, needed for getPosition
+        for i in range(0, 20):
+            if self.getPosition(errlog=False) != -1:
+                break
+            rospy.sleep(0.1)
+
+        # subscribe to command and then spin
+        self.server = actionlib.SimpleActionServer('~gripper_action', GripperCommandAction, execute_cb=self.actionCb, auto_start=False)
+        self.server.start()
+        rospy.spin()
+
+    def actionCb(self, goal):
+        """ Take an input command of width to open gripper. """
+        rospy.loginfo('Gripper controller action goal recieved: %f m' % goal.command.position)
+        # send command to gripper
+        if self.model.setCommand(goal.command) == False:
+            self.server.set_aborted(text="Command exceeds range")
+            return
+        # publish feedback
+        while True:
+            if self.server.is_preempt_requested():
+                self.server.set_preempted()
+                rospy.logwarn('Gripper Controller: Preempted.')
+                return
+            # get joint position, break when we have reached goal
+            if  abs(self.getPosition() - goal.command.position) < self.tolerance:
+                rospy.loginfo("Done. Pos=%.5f Goal=%.5f Tol=%.5f", self.getPosition(), goal.command.position, self.tolerance)
+                break
+            rospy.sleep(0.01)
+        self.server.set_succeeded()
+        rospy.loginfo('Gripper Controller: Succeeded.')
+
+    def stateCb(self, msg):
+        with self.mutex:
+            if self.joint in msg.name:  
+                self.state = msg
+    
+    def getPosition(self, errlog=True):
+        """ Return current gripper position from Joint status in meters """
+        with self.mutex:  # make copy of joint state and extract gripper position
+            st = self.state         
+        for name, position in zip(st.name, st.position):
+             if name == self.joint:
+                return position                
+        if errlog == True:        
+            rospy.logerr("No position update for " + self.joint )       
+        return -1
+
+
+if __name__=='__main__':
+    try:
+        GripperActionController()
+    except rospy.ROSInterruptException:
+        rospy.loginfo('Hasta la Vista...')
+

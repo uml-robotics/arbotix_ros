@@ -400,11 +400,16 @@ class SimServo(Joint):
         # Setup ROS/Gazebo interface
         self.pub = rospy.Publisher(robot+'/'+self.full_name+'_controller/command', Float64, queue_size=5)
         rospy.Subscriber(robot+"/joint_states", JointState, self.joint_state_cb)
+        if (self.name == "gripper_joint"):
+            rospy.Subscriber("gripper_command", Float64, self.gripper_command_cb)
         
     def setControlOutput(self, position):
         """ Set the position that controller is moving to."""
-        self.desired = position
-        return position
+        if (self.name != "gripper_joint"):
+            self.desired = position
+            return position
+        else:
+             pass
         
     def joint_state_cb(self, msg):
         """ Callback for the joint state message """
@@ -412,6 +417,10 @@ class SimServo(Joint):
         i = names.index(self.full_name)
         self.position = msg.position[i]
         self.velocity = msg.position[i]
+        
+    def gripper_command_cb(self, msg):
+        """ Callback for the desired gripper position """
+        self.desired = msg.data
         
         
 from controllers import *
