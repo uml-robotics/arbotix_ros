@@ -77,7 +77,7 @@ class ArbotixGazebo(object):
             self.joints[name] = SimServo(self, name, self.side, self.robot)
                 
         # setup controller
-        self.controllers = [SimServoController(self, "servos"), ]
+        self.controllers = [SimServoController(self, side, "servos"), ]
         controllers = rospy.get_param("~controllers", dict())
         for name, params in controllers.items():
             try:
