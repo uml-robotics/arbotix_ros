@@ -165,4 +165,3 @@ class FollowController(Controller):
     def getLoads(self):
         # Placeholder
         pass
-

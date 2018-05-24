@@ -40,12 +40,6 @@ from ax12 import *
 from joints import *
 from arbotix_python.parallel_convert import *
 
-# retrive files nessecary for websocket comms
-file_dir = sys.path[0]
-sys.path.append(file_dir + '/../../../..')
-from rss_git_lite.common import ws4pyRosMsgSrvFunctions_gen as ws4pyROS
-from rss_git_lite.common import rosConnectWrapper as rC
-
 
 class DynamixelServo(Joint):
 
@@ -405,15 +399,8 @@ class SimServo(Joint):
         self.velocity = 0.0
         
         # Setup ROS/Gazebo interface
-        #NOTE: We assume for now that Gazebo is running on the left computer
-        connection = "ws://192.168.0.50:9090/"
-        if side = ("left"):
-            self.pub = rC.RosMsg("ws4py", connection, "pub", robot+"/"+self.full_name+"_controller/command", "Float64", self.pack_float64)
-        else:
-            self.pub = rospy.Publisher(robot+'/'+self.full_name+'_controller/command', Float64, queue_size=5)
-            
+        self.pub = rospy.Publisher(robot+'/'+self.full_name+'_controller/command', Float64, queue_size=5)
         rospy.Subscriber(robot+"/joint_states", JointState, self.joint_state_cb)
-        
         if (self.name == "gripper_joint"):
             rospy.Subscriber("gripper_command", Float64, self.gripper_command_cb)
         
@@ -435,15 +422,6 @@ class SimServo(Joint):
     def gripper_command_cb(self, msg):
         """ Callback for the desired gripper position """
         self.desired = msg.data
-        
-    def pack_float64(float_num):
-        """ Package 'std_msgs/Float64' message. """
-        
-        # Place Float into dict
-        data = float_num
-        float_msg = {"data": data}
-        
-        return float_msg
         
         
 from controllers import *
@@ -584,7 +562,7 @@ class SimServoController(Controller):
     
     """
     
-    def __init__(self, device, side, name):
+    def __init__(self, device, name):
         
         # Setup simulated servo controller
         Controller.__init__(self, device, name)
@@ -611,8 +589,6 @@ class SimServoController(Controller):
                 
         if rospy.Time.now() > self.w_next:
             for joint in self.simservos:
-                if side == "left":
-                    joint.pub.publish(joint.desired)
-                else:
-                    joint.pub.send(joint.desired)
+                joint.pub.publish(joint.desired)
+
 

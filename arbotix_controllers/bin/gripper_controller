@@ -170,7 +170,7 @@ class ParallelGripperModel(GripperModel):
         
 class OneSideGripperModel(GripperModel):
     """ Simplest of grippers, one servo opens or closes to achieve a particular size opening. """
-    # Use base classes for all      
+    # Use base classes for all
 
 
 class GripperActionController:
