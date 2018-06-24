@@ -568,6 +568,7 @@ class SimServoController(Controller):
         Controller.__init__(self, device, name)
         self.simservos = list()
         self.iter = 0
+        self.initial_update = True
         
         # Get joints
         for joint in device.joints.values():
@@ -586,9 +587,18 @@ class SimServoController(Controller):
         if rospy.Time.now() > self.r_next:
             for joint in self.simservos:
                 pass #?
+        
+        # If this is the first update return the current joint states
+        # NOTE: Without this, when you specify an initial joint position
+        #       in Gazebo that is not a joint's zero angle, the controller
+        #       will publish "0.0", overwrite your intial position.
+        if self.initial_update:
+            for joint in self.simservos:
+                joint.desired = joint.position
+                self.initial_update = False
                 
+        # Publish command
         if rospy.Time.now() > self.w_next:
             for joint in self.simservos:
                 joint.pub.publish(joint.desired)
-
 
