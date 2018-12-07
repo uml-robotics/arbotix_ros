@@ -1,18 +1,12 @@
-## Arbotix Drivers
+# Arbotix Drivers
 
-This repository contains the Arbotix ROS drivers, catkinized, and ready for ROS Groovy and newer.
+## Summary
 
-## Changes for version 0.11.x
-Controller will now break when goal is reached.  
-Added support for PhantomX Pincher.   
-   To use the PhantomX Pincher, set environment variable "TURTLEBOT_ARM1" to pincher. You will need turtlebot_arm version 0.4.0 or higher for PhantomX Pincher 
+Slightly modified version of the regular [arbotix_ros](https://github.com/Interbotix/arbotix_ros) repository, which contains drivers for using the [Arbotix microcontorller](https://www.trossenrobotics.com/p/arbotix-robot-controller.aspx) with ROS. Modifications include a new controller (```arbotix_gazebo```), which matches the functionality of the hardware arbotix controller (``` arbotix_driver```) in simulation, and the publishing of joint loads from dynamixel servos on physical systems.
 
-## Changes for Groovy (version 0.8.x)
+## Recommended OS/Programs
 
-Several executables are now installed in /opt/ros/groovy/bin allowing you to run them without using rosrun:
- * controllerGUI.py is now arbotix_gui
- * terminal.py is now arbotix_terminal
-
-Other executables have been renamed to alleviate any name collisions:
- * driver.py is now renamed arbotix_driver
-
+This software was developed and tested in:
+- Ubuntu 16.04 LTS
+- ROS Kinetic
+- Gazebo 7.13.0
