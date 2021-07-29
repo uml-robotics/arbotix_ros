@@ -30,7 +30,10 @@
 
 ## @file arbotix.py Low-level code to control an ArbotiX.
 
-import serial, time, sys, thread
+import serial
+import time
+import sys
+import _thread as thread
 from ax12 import *
 from struct import unpack
 
@@ -64,12 +67,13 @@ class ArbotiX:
     ## @return The error level returned by the device. 
     def getPacket(self, mode, id=-1, leng=-1, error=-1, params = None):
         try:
-            d = self._ser.read()     
+            d = self._ser.read()
         except Exception as e:
-            print e
+            print(e)
             return None
         # need a positive byte
-        if d == '':
+        if d == b'':
+            print("got nothing")
             return None
 
         # now process our byte
@@ -103,6 +107,7 @@ class ArbotiX:
             else:
                 return self.getPacket(5, id, leng, error, params)
         elif mode == 6:         # read checksum
+            
             checksum = id + leng + error + sum(params) + ord(d)
             if checksum % 256 != 255:
                 return None
@@ -127,26 +132,29 @@ class ArbotiX:
         try:      
             self._ser.flushInput()
         except Exception as e:
-            print e
+            print(e)
         length = 2 + len(params)
         checksum = 255 - ((index + length + ins + sum(params))%256)
         try: 
-            self._ser.write(chr(0xFF)+chr(0xFF)+chr(index)+chr(length)+chr(ins))
+            msg = bytearray([0xFF,0xFF,index,length,ins])
+            self._ser.write(msg)
         except Exception as e:
-            print e
+            print(e)
             self._mutex.release()
             return None
         for val in params:
             try:
-                self._ser.write(chr(val))
+                msg = bytearray([val])
+                self._ser.write(msg)
             except Exception as e:
-                print e
+                print(e)
                 self._mutex.release()
                 return None
         try:
-            self._ser.write(chr(checksum))
+            msg = bytearray([checksum])
+            self._ser.write(msg)
         except Exception as e:
-            print e
+            print(e)
             self._mutex.release()
             return None
         if ret:
@@ -510,7 +518,7 @@ class ArbotiX:
     def setServo(self, index, value):
         if index > 7: return -1
         if value != 0 and (value < 500 or value > 2500):
-            print "ArbotiX Error: Servo value out of range:", value
+            print ("ArbotiX Error: Servo value out of range:", value)
         else:
             self.write(253, self._SERVO_BASE + 2*index, [value%256, value>>8])
         return 0
