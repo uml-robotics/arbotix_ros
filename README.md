@@ -10,3 +10,7 @@ This software was developed and tested in:
 - Ubuntu 16.04 LTS
 - ROS Kinetic
 - Gazebo 7.13.0
+
+## Notes
+
+- The code in this repository was developed using Python 2; Since ROS Noetic uses Python 3 exclusively, parts of the code may not function properly and it is recommended to use them only with previous versions of ROS.
