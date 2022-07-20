@@ -385,14 +385,14 @@ class SimServo(Joint):
     TODO: TEST
     """
     
-    def __init__(self, device, name, side, robot, ns="~joints"):
+    def __init__(self, device, name, robot, ns="~joints"):
         
         # Setup simulated servo
         Joint.__init__(self, device, name)
         n = ns+"/"+name+"/"
         self.name = name
         self.robot = robot
-        self.full_name = side+ '_'+ name
+        self.full_name = name
         self.id = int(rospy.get_param(n+"id"))
         self.position = 0.0
         self.desired = 0.0

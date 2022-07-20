@@ -61,11 +61,6 @@ class ArbotixGazebo(object):
         self.rate = rospy.get_param("~rate", 100.0)
         self.fake = rospy.get_param("~sim", False)
         self.robot = rospy.get_param("~robot", "")
-        is_left_arm = rospy.get_param("~left_arm", True)
-        if (is_left_arm):
-            self.side = "left"
-        else:
-            self.side = "right"
         rospy.loginfo("Simulated ArbotiX initialized.")
         
         # Setup publishers
@@ -74,7 +69,7 @@ class ArbotixGazebo(object):
         # setup joints
         self.joints = dict()
         for name in rospy.get_param("~joints", dict()).keys():
-            self.joints[name] = SimServo(self, name, self.side, self.robot)
+            self.joints[name] = SimServo(self, name, self.robot)
                 
         # setup controller
         self.controllers = [SimServoController(self, "servos"), ]
